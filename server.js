@@ -6,10 +6,18 @@ const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
 const Table = require('terminal-table');
+// Add at the very beginning of server.js
+require('dotenv').config();
+console.log("=== ENVIRONMENT VARIABLES ===");
+console.log("PORT:", process.env.PORT);
+console.log("INSTAGRAM_CLIENT_ID:", process.env.INSTAGRAM_CLIENT_ID ? "✅ Set" : "❌ Missing");
+console.log("FACEBOOK_ACCESS_TOKEN:", process.env.FACEBOOK_ACCESS_TOKEN ? "✅ Set" : "❌ Missing");
 
 const app = express();
 app.use(express.json());
 app.use('/public', express.static(path.join(__dirname, 'public')));
+
+
 
 // Ensure dirs exist
 [process.env.UPLOAD_DIR || './uploads', process.env.TOKEN_DIR || './tokens'].forEach(dir => {
