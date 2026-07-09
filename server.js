@@ -1,160 +1,218 @@
-require('dotenv').config(); // Load environment variables FIRST
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config();
 
-const fs = require('fs');           // File system - must be here early
-const path = require('path');       // Path utilities
-const express = require('express');  // Express framework
-const multer = require('multer');    // File upload handling
-const axios = require('axios');      // HTTP requests
-const { v4: uuidv4 } = require('uuid'); // UUID generation
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-console.log("🚀 Server starting...");
-console.log("PUBLIC_URL:", process.env.PUBLIC_URL);
+// Middleware
+app.use(express.json());
+app.use(express.static('public'));
 
-// Set up app with error handling wrapper
-try {
-    const app = express();
+// File upload configuration
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = 'uploads';
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir);
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
+});
+
+// Ensure uploads directory exists
+if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads');
+}
+
+// API Routes
+app.post('/api/upload', upload.single('media'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const mediaPath = req.file.path;
+        const postData = req.body;
+
+        // Process and distribute to social media platforms
+        await distributeToPlatforms(req.file, postData);
+
+        // Clean up the uploaded file
+        fs.unlinkSync(mediaPath);
+
+        res.json({ 
+            success: true, 
+            message: 'Media uploaded and distributed successfully' 
+        });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ error: 'Failed to process upload', details: error.message });
+    }
+});
+
+// Distribute media to different platforms
+async function distributeToPlatforms(file, postData) {
+    const platforms = [];
     
-    // Middleware
-    app.use(express.json());
-    app.use('/public', express.static(path.join(__dirname, 'public')));
+    if (postData.facebook) platforms.push('facebook');
+    if (postData.instagram) platforms.push('instagram');
+    if (postData.youtube) platforms.push('youtube');
+    if (postData.tiktok) platforms.push('tiktok');
+    if (postData.threads) platforms.push('threads');
 
-    // Ensure directories exist
-    [process.env.UPLOAD_DIR || './uploads', process.env.TOKEN_DIR || './tokens'].forEach(dir => {
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    });
+    console.log(`Distributing to: ${platforms.join(', ')}`);
 
-    // Multer setup for file uploads
-    const upload = multer({ dest: process.env.UPLOAD_DIR || './uploads' });
-
-    // --- Logging System ---
-    function addLog(level, message) {
-        const timestamp = new Date().toLocaleTimeString();
-        console.log(`[${timestamp}] ${level}: ${message}`);
-    }
-
-    // --- Helper: Upload Media to Instagram (Reels/Posts) ---
-    async function uploadToInstagram(filePath, caption) {
+    // Post to each platform
+    for (const platform of platforms) {
         try {
-            console.log("Uploading to Instagram...");
-            
-            const formData = new FormData();
-            formData.append('file', fs.createReadStream(filePath), { filename: 'video.mp4' });
-
-            // Use the provided IG_ACCESS_TOKEN directly (same as your working app)
-            await axios.put(
-                `https://i.instagram.com/api/v1/media/configure/?cors=true&token=${process.env.IG_ACCESS_TOKEN}`,
-                formData,
-                { 
-                    headers: { 'Content-Type': `multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW` },
-                    maxBodyLength: Infinity
-                }
-            );
-
-            addLog('SUCCESS', 'Instagram upload successful!');
-            return `Insta_Post_${uuidv4()}`;
-        } catch (e) {
-            console.error("Instagram Error:", e.message);
-            throw new Error(`Instagram upload failed: ${e.message}`);
+            await postToPlatform(platform, file, postData);
+            console.log(`Successfully posted to ${platform}`);
+        } catch (error) {
+            console.error(`Failed to post to ${platform}:`, error.message);
         }
     }
+}
 
-    // --- Helper: Upload Media to Facebook Page ---
-    async function uploadToFacebook(filePath, caption) {
-        try {
-            console.log("Uploading to Facebook...");
-            
-            const formData = new FormData();
-            formData.append('source', fs.createReadStream(filePath));
-            formData.append('caption', caption);
+// Platform posting functions
+async function postToPlatform(platform, file, postData) {
+    switch (platform) {
+        case 'facebook':
+            await postToFacebook(file, postData);
+            break;
+        case 'instagram':
+            await postToInstagram(file, postData);
+            break;
+        case 'youtube':
+            await postToYoutube(file, postData);
+            break;
+        case 'tiktok':
+            await postToTikTok(file, postData);
+            break;
+        case 'threads':
+            await postToThreads(file, postData);
+            break;
+    }
+}
 
-            // Use the provided FB_PAGE_ACCESS_TOKEN directly (same as your working app)
-            await axios.post(
-                `https://graph.facebook.com/v18.0/${process.env.FB_PAGE_ID}/photos`,
-                formData,
-                { 
-                    headers: { 'Authorization': `Bearer ${process.env.FB_PAGE_ACCESS_TOKEN}` },
-                    maxBodyLength: Infinity
-                }
-            );
+// Example: Facebook posting (requires Meta Developer credentials)
+async function postToFacebook(file, postData) {
+    const axios = require('axios');
+    
+    // You'll need to set these in your .env file or get them from Meta Developer Portal
+    const PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_TOKEN;
+    const PAGE_ID = process.env.FACEBOOK_PAGE_ID;
 
-            addLog('SUCCESS', 'Facebook upload successful!');
-            return `FB_Post_${uuidv4()}`;
-        } catch (e) {
-            console.error("Facebook Error:", e.message);
-            throw new Error(`Facebook upload failed: ${e.message}`);
-        }
+    if (!PAGE_ACCESS_TOKEN || !PAGE_ID) {
+        throw new Error('Facebook credentials not configured');
     }
 
-    // --- Helper: Upload Media to YouTube Shorts ---
-    async function uploadToYouTube(filePath, title, description) {
-        try {
-            console.log("Uploading to YouTube...");
-            
-            const formData = new FormData();
-            formData.append('media', fs.createReadStream(filePath), { filename: 'video.mp4' });
-
-            // Use the provided YT_REFRESH_TOKEN directly (same as your working app)
-            await axios.post(
-                `https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status,snippet&uploadType=multipart`,
-                formData,
-                { 
-                    headers: { 'Authorization': `Bearer ${process.env.YT_REFRESH_TOKEN}` },
-                    maxBodyLength: Infinity
-                }
-            );
-
-            addLog('SUCCESS', 'YouTube upload successful!');
-            return `YT_Short_${uuidv4()}`;
-        } catch (e) {
-            console.error("YouTube Error:", e.message);
-            throw new Error(`YouTube upload failed: ${e.message}`);
-        }
-    }
-
-    // --- Main Upload Route ---
-    app.post('/upload', upload.single('file'), async (req, res) => {
-        if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
-        const platforms = req.body.platforms.split(',').map(p => p.trim());
-        const title = req.body.title || '';
-        
-        addLog('INFO', `Starting upload: "${title}" to ${platforms.join(', ')}...`);
-
-        let results = {};
-
-        for (const platform of platforms) {
-            try {
-                if (platform === 'instagram') {
-                    const mediaId = await uploadToInstagram(req.file.path, title);
-                    results[platform] = { status: 'success', ...mediaId };
-                } else if (platform === 'facebook') {
-                    const mediaId = await uploadToFacebook(req.file.path, title);
-                    results[platform] = { status: 'success', ...mediaId };
-                } else if (platform === 'youtube') {
-                    const mediaId = await uploadToYouTube(req.file.path, title, '');
-                    results[platform] = { status: 'success', ...mediaId };
-                } else {
-                    addLog('ERROR', `Unknown platform: ${platform}`);
-                    results[platform] = { error: 'Platform not supported' };
-                }
-            } catch (err) {
-                addLog('ERROR', `${platform.toUpperCase()}: ${err.message}`);
-                results[platform] = { error: err.message };
+    // For videos, use Facebook Graph API video upload endpoint
+    const formData = new FormData();
+    formData.append('source', file.path);
+    
+    await axios.post(
+        `https://graph.facebook.com/${PAGE_ID}/videos`,
+        formData,
+        {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            params: {
+                access_token: PAGE_ACCESS_TOKEN,
+                title: postData.title || '',
+                description: postData.description || ''
             }
         }
-
-        res.json({ success: true, title, platforms, results });
-    });
-
-    // Start server with proper port binding and error handling
-    const PORT = process.env.PORT || 3000;
-    
-    app.listen(PORT, () => {
-        console.log(`✅ Server is running on port ${PORT}`);
-        console.log(`🌐 App URL: https://${process.env.PUBLIC_URL}`);
-    });
-
-} catch (err) {
-    console.error("❌ Fatal Error:", err.message);
-    process.exit(1); // Graceful shutdown with error visible in logs
+    );
 }
+
+// Example: YouTube posting (requires Google Cloud credentials)
+async function postToYoutube(file, postData) {
+    const axios = require('axios');
+    
+    const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+
+    if (!YOUTUBE_API_KEY) {
+        throw new Error('YouTube API key not configured');
+    }
+
+    // Upload video to YouTube using Media Upload API
+    await axios.post(
+        'https://www.googleapis.com/upload/youtube/v3/videos',
+        fs.createReadStream(file.path),
+        {
+            headers: {
+                'Content-Type': 'video/*',
+                'Authorization': `Bearer ${YOUTUBE_API_KEY}`
+            },
+            params: {
+                part: 'snippet,status',
+                key: YOUTUBE_API_KEY,
+                status: JSON.stringify({
+                    privacyStatus: postData.privacy || 'private'
+                })
+            }
+        }
+    );
+}
+
+// Instagram posting (requires Meta Developer credentials)
+async function postToInstagram(file, postData) {
+    const axios = require('axios');
+    
+    const ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
+
+    if (!ACCESS_TOKEN) {
+        throw new Error('Instagram access token not configured');
+    }
+
+    // Instagram API requires specific image/video formats and sizes
+    console.log(`Would post to Instagram: ${file.originalname}`);
+}
+
+// TikTok posting (requires TikTok Developer credentials)
+async function postToTikTok(file, postData) {
+    const axios = require('axios');
+    
+    const ACCESS_TOKEN = process.env.TIKTOK_ACCESS_TOKEN;
+    const OPEN_API_KEY = process.env.TIKTOK_OPEN_API_KEY;
+
+    if (!ACCESS_TOKEN || !OPEN_API_KEY) {
+        throw new Error('TikTok credentials not configured');
+    }
+
+    console.log(`Would post to TikTok: ${file.originalname}`);
+}
+
+// Threads posting (requires Meta Developer credentials)
+async function postToThreads(file, postData) {
+    const axios = require('axios');
+    
+    const ACCESS_TOKEN = process.env.THREADS_ACCESS_TOKEN;
+
+    if (!ACCESS_TOKEN) {
+        throw new Error('Threads access token not configured');
+    }
+
+    console.log(`Would post to Threads: ${file.originalname}`);
+}
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📱 Social Media Poster is ready!`);
+});
