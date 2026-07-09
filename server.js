@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require('uuid'); // UUID generation
 console.log("🚀 Server starting...");
 console.log("PORT:", process.env.PORT);
 console.log("INSTAGRAM_CLIENT_ID exists:", !!process.env.INSTAGRAM_CLIENT_ID);
+console.log("FACEBOOK_ACCESS_TOKEN exists:", !!process.env.FACEBOOK_ACCESS_TOKEN);
 
 // Set up app with error handling wrapper
 try {
@@ -32,6 +33,31 @@ try {
         const timestamp = new Date().toLocaleTimeString();
         console.log(`[${timestamp}] ${level}: ${message}`);
     }
+
+    // --- Dashboard Route (Show Success/Error Messages After Login) ---
+    app.get('/dashboard', (req, res) => {
+        const token = req.query.token;
+        const provider = req.query.provider || 'unknown';
+
+        console.log(`🔍 Checking dashboard for ${provider} token...`);
+
+        // If no token provided, show login page
+        if (!token) {
+            return res.send(`<html><body>
+                <h1>Login Required</h1>
+                <p>Please select an account to continue.</p>
+                <a href="/login/youtube">Login with YouTube</a>
+            </body></html>`);
+        }
+
+        // Show success message and link back to home page
+        res.send(`<html><body>
+            <h1>${provider.toUpperCase()} Login Successful!</h1>
+            <p>You've been logged in successfully.</p>
+            <p><strong>Token:</strong> ${token.substring(0, 20)}...</p>
+            <a href="/">Go to Home Page</a>
+        </body></html>`);
+    });
 
     // --- Helper: Get Instagram L-Local Token ---
     async function getLoliToken() {
@@ -101,6 +127,8 @@ try {
         const { provider } = req.params;
         let authUrl = '';
 
+        console.log(`🔗 Redirecting to ${provider} login page...`);
+
         switch (provider) {
             case 'facebook':
                 authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.FACEBOOK_ACCESS_TOKEN}&redirect_uri=${encodeURIComponent(process.env.FB_REDIRECT_URI)}&scope=pages_manage_videos,pages_manage_posts,short_video_upload`;
@@ -126,6 +154,7 @@ try {
                 res.send('Unknown provider');
         }
 
+        console.log(`📡 Redirecting user to: ${authUrl}`);
         res.redirect(authUrl);
     });
 
@@ -133,8 +162,16 @@ try {
     app.get('/callback/:provider', async (req, res) => {
         const { provider } = req.params;
 
+        console.log(`🔁 Received callback for ${provider}`);
+        console.log('Query params:', req.query); // Shows code, state, etc.
+
         if (!req.query.code || !req.query.state) {
-            return res.send('No code or state received');
+            console.error('❌ No code or state received');
+            return res.send(`<html><body>
+                <h1>Login Failed</h1>
+                <p>No authorization code was received.</p>
+                <a href="/login/${provider}">Try Again</a>
+            </body></html>`);
         }
 
         try {
@@ -143,6 +180,8 @@ try {
             if (provider === 'youtube') {
                 // Google OAuth2 Token Exchange
                 const codeVerifierFile = fs.readFileSync(`./tokens/youtube_code_verifier_${req.query.state}.txt`, 'utf8').trim();
+
+                console.log('📡 Exchanging token with Google...');
 
                 await axios.post('https://oauth2.googleapis.com/token', null, {
                     params: {
@@ -155,8 +194,12 @@ try {
                     }
                 });
 
-                accessToken = req.body.refresh_token || ''; // Simplified
+                console.log('✅ Token exchange successful!');
 
+                // Extract refresh token and access token from response
+                accessToken = req.body.refresh_token || ''; // Simplified: use refresh_token for persistence
+                
+                // Save tokens to file for reuse (server-side!)
                 fs.writeFileSync(`./tokens/youtube_refresh_${req.query.state}.txt`, JSON.stringify({
                     access_token: req.body.access_token,
                     refresh_token: req.body.refresh_token,
@@ -169,7 +212,7 @@ try {
                     params: {
                         client_id: provider === 'instagram' ? process.env.INSTAGRAM_CLIENT_ID : process.env.FACEBOOK_ACCESS_TOKEN,
                         client_secret: process.env.INSTAGRAM_CLIENT_SECRET,
-                        redirect_uri: `http://YOUR_RENDERS_URL/login/${provider}`, // Replace with actual URL
+                        redirect_uri: `http://YOUR_RENDERS_URL/login/${provider}`, // Replace with actual URL!
                         grant_type: 'authorization_code',
                         code: req.query.code
                     }
@@ -177,15 +220,50 @@ try {
 
                 accessToken = req.body.access_token || '';
 
+                console.log('✅ Token saved successfully!');
+
+                // Save token to server-side file (not just browser localStorage!)
                 fs.writeFileSync(`./tokens/meta_${req.query.state}.txt`, accessToken);
             }
 
             addLog('SUCCESS', `${provider.toUpperCase()} token refreshed successfully!`);
+            
+            // Redirect back to app with success message
             res.redirect(`/dashboard?token=${encodeURIComponent(accessToken)}&provider=${provider}`);
         } catch (err) {
-            console.error(`OAuth Error for ${provider}:`, err.message);
+            console.error(`❌ OAuth Error for ${provider}:`, err.message);
             addLog('ERROR', `${provider.toUpperCase()} OAuth failed: ${err.message}`);
-            res.send('Token exchange failed');
+            
+            // Send back to user with error message instead of crashing
+            res.send(`<html><body>
+                <h1>Login Failed</h1>
+                <p>Error: ${err.message}</p>
+                <a href="/login/${provider}">Try Again</a>
+            </body></html>`);
+        }
+    });
+
+    // --- New API Endpoint to Read Tokens from Server (Fix for "Please login first!" error) ---
+    app.get('/api/get-token', (req, res) => {
+        const provider = req.query.provider;
+
+        let tokenPath = '';
+
+        if (provider === 'facebook' || provider === 'threads') {
+            tokenPath = `./tokens/meta_${Date.now()}.txt`; // Use timestamp for uniqueness
+        } else if (provider === 'instagram') {
+            tokenPath = './tokens/meta_instagram.txt';
+        } else if (provider === 'youtube') {
+            tokenPath = './tokens/youtube_refresh_latest.txt';
+        }
+
+        try {
+            const data = fs.readFileSync(tokenPath, 'utf8');
+            console.log(`✅ Found ${provider} token on server`);
+            res.json({ success: true, token: data }); // Return the stored token
+        } catch (err) {
+            addLog('ERROR', `Token not found for ${provider}: ${err.message}`);
+            res.json({ success: false, message: "No token available" });
         }
     });
 
@@ -195,7 +273,7 @@ try {
 
         const platforms = req.body.platforms.split(',').map(p => p.trim());
         const title = req.body.title || '';
-        const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+        const accessToken = process.env.FACEBOOK_ACCESS_TOKEN; // Default for FB/Threads
 
         addLog('INFO', `Starting upload: "${title}" to ${platforms.join(', ')}...`);
 
