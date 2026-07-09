@@ -2,7 +2,9 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config();
+
+// For Render, environment variables are automatically available
+// No need for dotenv package!
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -109,12 +111,12 @@ async function postToPlatform(platform, file, postData) {
 async function postToFacebook(file, postData) {
     const axios = require('axios');
     
-    // You'll need to set these in your .env file or get them from Meta Developer Portal
+    // Environment variables are automatically available in Render
     const PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_TOKEN;
     const PAGE_ID = process.env.FACEBOOK_PAGE_ID;
 
     if (!PAGE_ACCESS_TOKEN || !PAGE_ID) {
-        throw new Error('Facebook credentials not configured');
+        throw new Error('Facebook credentials not configured - add FACEBOOK_PAGE_TOKEN and FACEBOOK_PAGE_ID to Render environment variables');
     }
 
     // For videos, use Facebook Graph API video upload endpoint
@@ -142,7 +144,7 @@ async function postToYoutube(file, postData) {
     const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
     if (!YOUTUBE_API_KEY) {
-        throw new Error('YouTube API key not configured');
+        throw new Error('YouTube API key not configured - add YOUTUBE_API_KEY to Render environment variables');
     }
 
     // Upload video to YouTube using Media Upload API
@@ -172,7 +174,7 @@ async function postToInstagram(file, postData) {
     const ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
 
     if (!ACCESS_TOKEN) {
-        throw new Error('Instagram access token not configured');
+        throw new Error('Instagram access token not configured - add INSTAGRAM_ACCESS_TOKEN to Render environment variables');
     }
 
     // Instagram API requires specific image/video formats and sizes
@@ -187,7 +189,7 @@ async function postToTikTok(file, postData) {
     const OPEN_API_KEY = process.env.TIKTOK_OPEN_API_KEY;
 
     if (!ACCESS_TOKEN || !OPEN_API_KEY) {
-        throw new Error('TikTok credentials not configured');
+        throw new Error('TikTok credentials not configured - add TIKTOK_ACCESS_TOKEN and TIKTOK_OPEN_API_KEY to Render environment variables');
     }
 
     console.log(`Would post to TikTok: ${file.originalname}`);
@@ -200,7 +202,7 @@ async function postToThreads(file, postData) {
     const ACCESS_TOKEN = process.env.THREADS_ACCESS_TOKEN;
 
     if (!ACCESS_TOKEN) {
-        throw new Error('Threads access token not configured');
+        throw new Error('Threads access token not configured - add THREADS_ACCESS_TOKEN to Render environment variables');
     }
 
     console.log(`Would post to Threads: ${file.originalname}`);
