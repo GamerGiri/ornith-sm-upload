@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media Cross-Poster</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 2.5em; color: #2c3e50; margin-bottom: 10px; }
+        .subtitle { color: #7f8c8d; font-size: 1.1em; }
+        
+        /* Upload Section */
+        .upload-section { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        
+        .file-input-wrapper { position: relative; display: inline-block; cursor: pointer; }
+        
+        .custom-file-upload { 
+            border: 2px dashed #3498db; padding: 20px 40px; border-radius: 8px; 
+            text-align: center; color: #3498db; font-weight: bold; transition: all 0.3s;
+        }
+        
+        .custom-file-upload:hover { background: #eaf6ff; border-color: #2c3e50; }
+        
+        input[type="file"] { display: none; }
+        
+        /* Preview Area */
+        .preview-area { margin-top: 20px; text-align: center; }
+        .preview-img, .preview-video { max-width: 100%; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Platform Selection */
+        .platform-selection { margin-top: 25px; }
+        .platform-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        
+        .platform-checkbox { 
+            position: relative; padding: 15px; border-radius: 8px; cursor: pointer; transition: all 0.3s;
+        }
+        
+        input[type="checkbox"] { display: none; }
+        
+        /* Platform styles when selected */
+        #youtube:checked + .platform-checkbox { background: #ff000020; border-left: 4px solid #ff0000; }
+        #fb_page:checked + .platform-checkbox { background: #1877f220; border-left: 4px solid #1877f2; }
+        #insta_business:checked + .platform-checkbox { background: #e1306c20; border-left: 4px solid #e1306c; }
+        
+        .platform-label { font-weight: bold; display: block; margin-bottom: 5px; }
+        .platform-desc { font-size: 0.85em; color: #7f8c8d; }
+        
+        /* Title Input */
+        .title-input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; margin-top: 15px; font-size: 1em; transition: border-color 0.3s; }
+        .title-input:focus { outline: none; border-color: #3498db; }
+        
+        /* Upload Button */
+        .upload-btn { 
+            width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; 
+            margin-top: 20px; cursor: pointer; transition: transform 0.2s, box-shadow 0.3s;
+        }
+        
+        .upload-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3); }
+        .upload-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        /* Transmission Log */
+        .log-section { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 30px; }
+        .log-section h2 { margin-bottom: 20px; color: #2c3e50; }
+        
+        .log-container { max-height: 500px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; }
+        
+        .log-entry { padding: 12px; margin-bottom: 10px; border-radius: 6px; background: #f9f9f9; border-left: 4px solid #e0e0e0; }
+        .log-entry.success { border-left-color: #27ae60; background: #eafaf1; }
+        .log-entry.failed { border-left-color: #e74c3c; background: #fdedec; }
+        
+        .log-time { font-size: 0.85em; color: #7f8c8d; margin-bottom: 5px; }
+        .log-platform { font-weight: bold; display: block; margin-bottom: 3px; }
+        .log-title { font-size: 0.95em; }
+        
+        /* Token Generation Section */
+        .token-section { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 30px; }
+        .token-section h2 { margin-bottom: 20px; color: #2c3e50; }
+        
+        .token-inputs { display: grid; gap: 15px; margin-top: 15px; }
+        .token-row { display: flex; align-items: center; gap: 10px; }
+        .token-label { width: 200px; font-weight: bold; color: #7f8c8d; }
+        .token-input { flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; font-family: monospace; font-size: 0.9em; }
+        
+        .save-btn { 
+            padding: 12px 30px; background: #27ae60; color: white; border: none; border-radius: 6px; 
+            font-weight: bold; cursor: pointer; transition: background 0.3s; margin-top: 20px;
+        }
+        
+        .save-btn:hover { background: #219a52; }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8em; }
+            .platform-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Social Media Cross-Poster</h1>
+            <p class="subtitle">Upload once, share everywhere - Zero Storage Required</p>
+        </header>
+        
+        <!-- Upload Section -->
+        <section class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="mediaFile" accept="image/*,video/*">
+                <label for="mediaFile" class="custom-file-upload">📁 Click to Select Image or Video</label>
+            </div>
+            
+            <div class="preview-area" id="previewArea" style="display:none;">
+                <!-- Preview will appear here -->
+            </div>
+            
+            <div class="platform-selection">
+                <h3>Select Platforms:</h3>
+                <div class="platform-grid">
+                    <label>
+                        <input type="checkbox" id="youtube" value="youtube">
+                        <div class="platform-checkbox">
+                            <span class="platform-label">🎬 YouTube</span>
+                            <span class="platform-desc">Upload as video with title</span>
+                        </div>
+                    </label>
+                    
+                    <label>
+                        <input type="checkbox" id="fb_page" value="fb_page">
+                        <div class="platform-checkbox">
+                            <span class="platform-label">📘 Facebook Page</span>
+                            <span class="platform-desc">Post photo with caption</span>
+                        </div>
+                    </label>
+                    
+                    <label>
+                        <input type="checkbox" id="insta_business" value="insta_business">
+                        <div class="platform-checkbox">
+                            <span class="platform-label">📸 Instagram Business</span>
+                            <span class="platform-desc">Post as Reel/Photo</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <input type="text" id="postTitle" class="title-input" placeholder="Enter post title/caption..." maxlength="200">
+            
+            <button id="uploadBtn" class="upload-btn" onclick="uploadToPlatforms()">⬆️ Upload to All Selected Platforms</button>
+        </section>
+        
+        <!-- Token Generation Section -->
+        <section class="token-section">
+            <h2>🔑 Platform Tokens (Required for API Access)</h2>
+            <p style="color: #7f8c8d; margin-bottom: 15px;">Enter your OAuth refresh tokens obtained from each platform's developer console.</p>
+            
+            <div class="token-inputs">
+                <div class="token-row">
+                    <label class="token-label">YouTube Refresh Token:</label>
+                    <input type="text" id="youtubeToken" class="token-input" placeholder="Paste YouTube refresh token here...">
+                </div>
+                
+                <div class="token-row">
+                    <label class="token-label">Facebook Access Token:</label>
+                    <input type="text" id="fbToken" class="token-input" placeholder="Paste Facebook access token here...">
+                </div>
+                
+                <div class="token-row">
+                    <label class="token-label">Instagram Business Token:</label>
+                    <input type="text" id="instaToken" class="token-input" placeholder="Paste Instagram business token here...">
+                </div>
+            </div>
+            
+            <button class="save-btn" onclick="saveTokens()">💾 Save Tokens to Server</button>
+        </section>
+        
+        <!-- Transmission Log -->
+        <section class="log-section">
+            <h2>📋 Transmission Log</h2>
+            <div class="log-container" id="transmissionLog">
+                <p style="text-align: center; color: #7f8c8d; padding: 40px;">No uploads yet. Your log will appear here...</p>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

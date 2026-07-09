@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: social-media-cross-poster-frontend
+    env: static
+    buildCommand: cd frontend && npm install && cp index.html app.js style.css dist/
+    startCommand: echo "Frontend served via API"
