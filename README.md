@@ -1,2 +1,0 @@
-# ornith-sm-upload
-

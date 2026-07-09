@@ -1,0 +1,3 @@
+mkdir social-uploader && cd social-uploader
+npm init -y
+npm install express multer axios uuid dotenv qrcode terminal-table
