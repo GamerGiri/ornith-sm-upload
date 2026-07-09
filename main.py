@@ -1,7 +1,7 @@
 # Add this at the top of main.py to get detailed error messages:
 import traceback
 import sys
-
+import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
