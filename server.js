@@ -251,6 +251,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     res.json({ success: true, title, platforms, results });
 });
 
-app.listen(process.env.PORT || 3000, () => {
-    console.log(`Server running on port ${process.env.PORT || 3000}`);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
+
