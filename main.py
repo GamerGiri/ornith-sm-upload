@@ -1,8 +1,41 @@
+# Add this at the top of main.py to get detailed error messages:
+import traceback
+import sys
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks
 import httpx
 import logging
 from fastapi.staticfiles import StaticFiles
 import os
+
+# Add these at the top of main.py after importing modules:
+YOUTUBE_TOKEN = "YOUR_ACTUAL_YOUTUBE_REFRESH_TOKEN"  # Replace with real token
+FB_PAGE_ID = "YOUR_FB_PAGE_ID"                        # Get from Facebook settings
+INSTA_BUSINESS_ID = "YOUR_INSTAGRAM_BUSINESS_ID"      # Get from Instagram Business
+
+# Then update your upload function:
+async def post_to_youtube(file_bytes, title):
+    headers = {
+        'Authorization': f'Bearer {YOUTUBE_TOKEN}',
+        'Content-Type': 'application/octet-stream'
+    }
+    
+    url = "https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status&uploadType=resumable"
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, content=file_bytes, headers=headers)
+        return response.json()
+
+async def post_to_meta(platform, file_bytes, title):
+    if platform == 'fb_page':
+        url = f"https://graph.facebook.com/v19.0/{FB_PAGE_ID}/photos?access_token={YOUTUBE_TOKEN}"  # Use correct token for FB
+        data = {"message": title}
+    elif platform == 'insta_business':
+        url = f"https://graph.facebook.com/v19.0/{INSTA_BUSINESS_ID}/media?type=REELS"
+        data = {"caption": title, "is_published": True}
 
 app = FastAPI()
 
