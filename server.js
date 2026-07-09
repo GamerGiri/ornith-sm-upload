@@ -32,31 +32,6 @@ try {
         console.log(`[${timestamp}] ${level}: ${message}`);
     }
 
-    // --- Dashboard Route (Show Success/Error Messages After Login) ---
-    app.get('/dashboard', (req, res) => {
-        const token = req.query.token;
-        const provider = req.query.provider || 'unknown';
-
-        console.log(`🔍 Checking dashboard for ${provider} token...`);
-
-        // If no token provided, show login page
-        if (!token) {
-            return res.send(`<html><body>
-                <h1>Login Required</h1>
-                <p>Please select an account to continue.</p>
-                <a href="/login/youtube">Login with YouTube</a>
-            </body></html>`);
-        }
-
-        // Show success message and link back to home page
-        res.send(`<html><body>
-            <h1>${provider.toUpperCase()} Login Successful!</h1>
-            <p>You've been logged in successfully.</p>
-            <p><strong>Token:</strong> ${token.substring(0, 20)}...</p>
-            <a href="/">Go to Home Page</a>
-        </body></html>`);
-    });
-
     // --- Helper: Upload Media to Instagram (Reels/Posts) ---
     async function uploadToInstagram(filePath, caption) {
         try {
@@ -64,14 +39,13 @@ try {
             
             const formData = new FormData();
             formData.append('file', fs.createReadStream(filePath), { filename: 'video.mp4' });
-            formData.append('caption_text', caption);
 
-            // Use the provided IG_ACCESS_TOKEN directly
-            await axios.post(
-                `https://graph.facebook.com/v18.0/${process.env.IG_USER_ID}/media`,
+            // Use the provided IG_ACCESS_TOKEN directly (same as your working app)
+            await axios.put(
+                `https://i.instagram.com/api/v1/media/configure/?cors=true&token=${process.env.IG_ACCESS_TOKEN}`,
                 formData,
-                {
-                    headers: { 'Authorization': `Bearer ${process.env.IG_ACCESS_TOKEN}` },
+                { 
+                    headers: { 'Content-Type': `multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW` },
                     maxBodyLength: Infinity
                 }
             );
@@ -79,8 +53,8 @@ try {
             addLog('SUCCESS', 'Instagram upload successful!');
             return `Insta_Post_${uuidv4()}`;
         } catch (e) {
-            addLog('ERROR', `Instagram upload failed: ${e.message}`);
-            throw e;
+            console.error("Instagram Error:", e.message);
+            throw new Error(`Instagram upload failed: ${e.message}`);
         }
     }
 
@@ -93,11 +67,11 @@ try {
             formData.append('source', fs.createReadStream(filePath));
             formData.append('caption', caption);
 
-            // Use the provided FB_PAGE_ACCESS_TOKEN directly
+            // Use the provided FB_PAGE_ACCESS_TOKEN directly (same as your working app)
             await axios.post(
                 `https://graph.facebook.com/v18.0/${process.env.FB_PAGE_ID}/photos`,
                 formData,
-                {
+                { 
                     headers: { 'Authorization': `Bearer ${process.env.FB_PAGE_ACCESS_TOKEN}` },
                     maxBodyLength: Infinity
                 }
@@ -106,8 +80,8 @@ try {
             addLog('SUCCESS', 'Facebook upload successful!');
             return `FB_Post_${uuidv4()}`;
         } catch (e) {
-            addLog('ERROR', `Facebook upload failed: ${e.message}`);
-            throw e;
+            console.error("Facebook Error:", e.message);
+            throw new Error(`Facebook upload failed: ${e.message}`);
         }
     }
 
@@ -119,23 +93,21 @@ try {
             const formData = new FormData();
             formData.append('media', fs.createReadStream(filePath), { filename: 'video.mp4' });
 
-            // Use the provided YT_REFRESH_TOKEN directly
+            // Use the provided YT_REFRESH_TOKEN directly (same as your working app)
             await axios.post(
-                'https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status,snippet&uploadType=multipart',
+                `https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status,snippet&uploadType=multipart`,
                 formData,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${process.env.YT_REFRESH_TOKEN}`,
-                        'Content-Type': 'multipart/related; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW'
-                    }
+                { 
+                    headers: { 'Authorization': `Bearer ${process.env.YT_REFRESH_TOKEN}` },
+                    maxBodyLength: Infinity
                 }
             );
 
             addLog('SUCCESS', 'YouTube upload successful!');
             return `YT_Short_${uuidv4()}`;
         } catch (e) {
-            addLog('ERROR', `YouTube upload failed: ${e.message}`);
-            throw e;
+            console.error("YouTube Error:", e.message);
+            throw new Error(`YouTube upload failed: ${e.message}`);
         }
     }
 
