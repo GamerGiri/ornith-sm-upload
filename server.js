@@ -18,7 +18,7 @@ const path = require('path');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 //const QRCode = require('qrcode');
-const Table = require('terminal-table');
+//const Table = require('terminal-table');
 // Add at the very beginning of server.js
 require('dotenv').config();
 console.log("=== ENVIRONMENT VARIABLES ===");
