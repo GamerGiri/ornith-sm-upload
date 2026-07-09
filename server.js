@@ -1,3 +1,16 @@
+try {
+// DEBUG MODE - Add this at the very beginning of server.js
+console.log("🚀 Server starting...");
+console.log("PORT:", process.env.PORT);
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("INSTAGRAM_CLIENT_ID exists:", !!process.env.INSTAGRAM_CLIENT_ID);
+console.log("FACEBOOK_ACCESS_TOKEN exists:", !!process.env.FACEBOOK_ACCESS_TOKEN);
+
+// Ensure .env is loaded first
+require('dotenv').config();
+
+console.log("✅ All modules loaded successfully");
+
 require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
@@ -251,8 +264,10 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     res.json({ success: true, title, platforms, results });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-
+app.listen(process.env.PORT || 3000, () => {
+        console.log(`✅ Server is running on port ${process.env.PORT || 3000}`);
+    });
+} catch (err) {
+    console.error("❌ Fatal Error:", err.message);
+    process.exit(1); // This will stop the app gracefully with error visible in logs
+}
