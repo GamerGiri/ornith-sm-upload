@@ -17,7 +17,7 @@ const multer = require('multer');
 const path = require('path');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
-const QRCode = require('qrcode');
+//const QRCode = require('qrcode');
 const Table = require('terminal-table');
 // Add at the very beginning of server.js
 require('dotenv').config();
