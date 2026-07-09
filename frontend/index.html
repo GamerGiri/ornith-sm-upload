@@ -255,23 +255,32 @@
 
         // Add Log Entry to UI (using localStorage)
         function addLogEntry(status, platforms, title, message) {
-            const logContainer = document.getElementById('transmissionLog');
-            
-            // Remove "no uploads" message if present
-            const noUploadsMsg = logContainer.querySelector('.placeholder-msg');
-            if (noUploadsMsg) noUploadsMsg.remove();
-            
-            // Get existing logs from localStorage
-            let logs = JSON.parse(localStorage.getItem('transmissionLogs') || '[]');
-            
-            const now = new Date();
-            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-            
-            let platformsHTML = '';
-            selectedPlatforms.forEach(p => {
-                const platformNames = { youtube: 'YouTube', fb_page: 'Facebook Page', insta_business: 'Instagram' };
-                platformsHTML += `<span>${platformNames[p]} ✓</span><br>`;
-            });
+    const logContainer = document.getElementById('transmissionLog');
+    
+    let platformsHTML = '';
+    selectedPlatforms.forEach(p => {
+        const platformNames = { youtube: 'YouTube', fb_page: 'Facebook Page', insta_business: 'Instagram' };
+        platformsHTML += `<span>${platformNames[p]} ✓</span><br>`;
+    });
+    
+    const logEntry = `
+        <div class="log-entry ${status}">
+            <div class="log-time">${timeString}</div>
+            <span class="log-platforms">Status: ${status === 'success' ? '✅ Success' : '❌ Failed'}</span>
+            <span class="log-title">Title: "${title}"</span>
+            <p>${platformsHTML}</p>
+            ${message ? `<p style="font-size: 0.85em; color: #e74c3c;"><strong>Error:</strong> ${message}</p>` : ''}
+        </div>
+    `;
+    
+    // Update localStorage with new entry including error details
+    let logs = JSON.parse(localStorage.getItem('transmissionLogs') || '[]');
+    logs.unshift({ timestamp: timeString, platforms: selectedPlatforms, title, status, message });
+    localStorage.setItem('transmissionLogs', JSON.stringify(logs));
+    
+    logContainer.innerHTML = logEntry + logContainer.innerHTML;
+}
+
             
             const logEntry = `
                 <div class="log-entry ${status}">
