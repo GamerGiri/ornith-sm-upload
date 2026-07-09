@@ -1,3 +1,10 @@
+// Add this near the top of server.js
+console.log('Starting social media poster...');
+console.log(`Environment check:`);
+console.log(`- PORT: ${process.env.PORT}`);
+console.log(`- FACEBOOK_PAGE_TOKEN configured: ${!!process.env.FACEBOOK_PAGE_TOKEN}`);
+console.log(`- YOUTUBE_API_KEY configured: ${!!process.env.YOUTUBE_API_KEY}`);
+
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
